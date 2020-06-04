@@ -1,6 +1,7 @@
 from collections import namedtuple
 from typing import Dict
 
+from src.music.music_checker import MusicChecker
 from src.music.music_group import MusicGroup
 
 _CurrentlyPlaying = namedtuple("_CurrentlyPlaying", ["group_index", "track_list_index"])
@@ -30,6 +31,7 @@ class MusicManager:
             groups = sorted(groups, key=lambda x: x.name)
         self.groups = tuple(groups)
         self._currently_playing = None
+        MusicChecker().do_all_checks(self.groups, self.directory)
 
     def __eq__(self, other):
         if isinstance(other, MusicManager):
