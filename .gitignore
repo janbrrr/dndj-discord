@@ -1,0 +1,19 @@
+# Cache
+__pycache__/
+.pytest_cache/
+.dndj_cache/
+
+# IDE-related files
+.idea/
+.vscode/
+
+# Environments
+env/
+venv/
+
+# Coverage
+.coverage
+coverage_html/
+
+# Secrets
+token.txt
