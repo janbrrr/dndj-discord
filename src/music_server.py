@@ -14,20 +14,18 @@ logger.addHandler(stream_handler)
 
 
 class MusicServer(commands.Cog):
-    def __init__(self, bot):
+    def __init__(self, bot, host, port):
         self.app = None
         self.runner = None
-        self.host = None
-        self.port = None
+        self.host = host
+        self.port = port
         self.bot = bot
 
     @commands.command()
-    async def start(self, ctx, host="127.0.0.1", port=8080):
+    async def start(self, ctx):
         """
         Starts the web server.
         """
-        self.host = host
-        self.port = port
         self.app = await self._init_app()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
