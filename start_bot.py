@@ -1,5 +1,6 @@
 import argparse
 
+from src.check_version import check_youtube_dl_version
 from src.music_bot import MusicBot
 
 if __name__ == "__main__":
@@ -21,4 +22,5 @@ if __name__ == "__main__":
     parser.add_argument("--port", dest="port", action="store", default=8080, help="The port (default: 8080)")
 
     args = parser.parse_args()
+    check_youtube_dl_version()
     MusicBot(config_path=args.config, host=args.host, port=args.port).run()
