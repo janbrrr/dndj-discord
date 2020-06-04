@@ -1,13 +1,12 @@
-import uuid
 import logging
+import uuid
+
 import aiohttp_jinja2
 import jinja2
-
-from discord.ext import commands
 from aiohttp import web
-
-from src.logging_config import stream_handler
+from discord.ext import commands
 from src import settings
+from src.logging_config import stream_handler
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -15,7 +14,6 @@ logger.addHandler(stream_handler)
 
 
 class MusicServer(commands.Cog):
-
     def __init__(self, bot):
         self.app = None
         self.runner = None
@@ -98,7 +96,7 @@ class MusicServer(commands.Cog):
         logger.info(f"Client {ws_identifier} connected.")
         try:
             while True:
-                msg = await ws_current.receive()
+                await ws_current.receive()
         except RuntimeError:
             logger.info(f"Client {ws_identifier} disconnected.")
             del request.app["websockets"][ws_identifier]
