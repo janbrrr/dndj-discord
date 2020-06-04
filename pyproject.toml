@@ -1,0 +1,23 @@
+[tool.black]
+line-length = 120
+include = '\.pyi?$'
+exclude = '''
+/(
+    .git
+  | .dndj_cache
+  | .pytest_cache
+  | venv
+  | docs
+  | coverage_html
+)/
+'''
+
+[tool.isort]
+atomic = true
+line_length = 120
+lines_after_imports = 2
+known_first_party = 'src'
+default_section = 'THIRDPARTY'
+multi_line_output = 3
+include_trailing_comma = true
+skip = 'venv'
