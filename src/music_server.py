@@ -76,7 +76,9 @@ class MusicServer(commands.Cog):
         """
         Returns the index page.
         """
-        context = {}
+        context = {
+            "music": {"volume": self.bot.music.volume, "currently_playing": None, "groups": self.bot.music.groups}
+        }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
     async def index(self, request):

@@ -1,6 +1,13 @@
+from collections import namedtuple
 from typing import Dict
 
 from src.music.music_group import MusicGroup
+
+_CurrentlyPlaying = namedtuple("_CurrentlyPlaying", ["group_index", "track_list_index"])
+CurrentlyPlaying = namedtuple(
+    "CurrentlyPlaying",
+    ["group_index", "group_name", "track_list_index", "track_list_name", "master_volume", "track_list_volume"],
+)
 
 
 class MusicManager:
@@ -22,6 +29,7 @@ class MusicManager:
         if "sort" not in config or ("sort" in config and config["sort"]):
             groups = sorted(groups, key=lambda x: x.name)
         self.groups = tuple(groups)
+        self._currently_playing = None
 
     def __eq__(self, other):
         if isinstance(other, MusicManager):
@@ -35,3 +43,19 @@ class MusicManager:
                     return False
             return True
         return False
+
+    @property
+    def currently_playing(self) -> CurrentlyPlaying:
+        """
+        Returns information about the music that is currently being played.
+        Fields are `None` if nothing is being played.
+        """
+        if self._currently_playing is not None:
+            group_index = self._currently_playing.group_index
+            group = self.groups[group_index]
+            track_list_index = self._currently_playing.track_list_index
+            track_list = group.track_lists[track_list_index]
+            return CurrentlyPlaying(
+                group_index, group.name, track_list_index, track_list.name, self.volume, track_list.volume
+            )
+        return CurrentlyPlaying(None, None, None, None, self.volume, None)

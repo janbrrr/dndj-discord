@@ -1,0 +1,103 @@
+:root {
+    --myLightText: #373d3f;
+    --myLightHighlight: #1A73E8;
+    --myDarkText: #E0E0E0;
+    --myDarkHighlight: #337ab7;
+}
+
+body {
+    color: var(--myLightText);
+}
+
+.btn:hover {
+    color: var(--myLightHighlight);
+}
+
+.playing {
+    color: var(--myLightHighlight);
+}
+
+.playing:hover {
+    color: var(--myLightHighlight);
+}
+
+.playing .music-play-btn{
+    display: none;
+}
+
+.music-stop-btn {
+    display: none;
+}
+
+.playing .music-stop-btn{
+    color: var(--myLightHighlight);
+    display: inline-block;
+}
+
+.slider {
+    margin-left: 15px;
+    margin-right: 15px;
+}
+
+.group-item .slider-horizontal {
+    width: 100px !important;
+}
+
+.slider-selection {
+	background: #BABABA;
+}
+
+.collapse-icon {
+    margin-right: 15px;
+}
+
+.collapse-btn {
+    width: 100%;
+    text-align: left;
+}
+
+.tab-content {
+    margin-top: 15px;
+}
+
+.group-item {
+    padding: .75rem 1.25rem;
+}
+
+.player-icon {
+    padding: .375rem .75rem;
+}
+
+.nav {
+    width: 100%;
+}
+
+.headline {
+    margin-top: 1rem;
+}
+
+#toast-container {
+    z-index: 1030;
+    pointer-events: none;
+}
+
+.toast {
+    pointer-events: all;
+}
+
+.hidden {
+    display: none;
+}
+
+.repeat-count-input {
+    max-width: 50px;
+    margin-right: 5px;
+}
+
+.repeat-delay-input {
+    max-width: 150px;
+}
+
+.nav-link {
+    text-align: center;
+}

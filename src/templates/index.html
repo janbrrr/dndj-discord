@@ -1,11 +1,65 @@
 <!DOCTYPE html>
-<html lang="en">
+<meta charset="utf-8"/>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+    <title>D&DJ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.12.0/css/all.css" crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/11.0.2/css/bootstrap-slider.min.css"
+          integrity="sha256-lqhgI/DR+R+Tp+u5QlmEkloSWMs2jra2XYV0NM0nu8U=" crossorigin="anonymous" />
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/darkMode.css">
+    <link rel="stylesheet" href="/static/css/inputField.css">
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+            integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+            crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
+            integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/11.0.2/bootstrap-slider.min.js"
+            integrity="sha256-8VbJDPttkSKrdS3+sy6jiz6f1pu+ncMbcV5nnLN/suU="
+            crossorigin="anonymous"></script>
     <script src="/static/js/websocket.js/"></script>
+    <script src="/static/js/musicPlayerUtils.js/"></script>
+    <script src="/static/js/musicAPIUtils.js/"></script>
+    <script src="/static/js/slider.js/"></script>
+    <script src="/static/js/collapse.js/"></script>
+    <script src="/static/js/darkMode.js/"></script>
 </head>
-<body>
-Hello World
+<body class="dark-mode">
+<div id="toast-container" aria-live="polite" aria-atomic="true" class="position-fixed w-100 d-flex flex-column align-items-center">
+</div>
+<div class="container">
+    <div class="headline">
+        <p class="text-center h1">
+            D&DJ
+        </p>
+    </div>
+    <div class="d-flex">
+        <button type="button" class="btn ml-auto" onclick="toggleDarkMode()">
+            <i class="fas fa-adjust"></i>
+        </button>
+    </div>
+    <div class="row">
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item col-12">
+                <a class="nav-link active" id="music-tab" data-toggle="tab" href="#music" role="tab" aria-controls="music"
+                   aria-selected="true">Music</a>
+            </li>
+        </ul>
+    </div>
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="music" role="tabpanel" aria-labelledby="music-tab">
+            {% include '_music.html' %}
+        </div>
+    </div>
+</div>
 </body>
 </html>
