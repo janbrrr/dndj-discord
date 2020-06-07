@@ -16,10 +16,11 @@ logger.addHandler(stream_handler)
 class MusicBot(commands.Bot):
     def __init__(self, config_path, host, port):
         super().__init__(command_prefix=commands.when_mentioned_or("!"), description="D&DJ Music Bot")
-        self.add_cog(MusicServer(self, host, port))
+        server = MusicServer(self, host, port)
+        self.add_cog(server)
         with open(config_path) as config_file:
             config = yaml.load(config_file, Loader=CustomLoader)
-        self.music = MusicManager(config["music"])
+        self.music = MusicManager(config["music"], server.on_state_change)
 
     def run(self):
         with open(settings.TOKEN_FILE, "r") as file:

@@ -96,7 +96,6 @@ function _handleNowPlaying(data) {
 function _handleMusicStopped(data) {
     setMusicNotPlaying();
     console.log("Music stopped playing");
-    displayToast("Music", "Stopped the music.");
 }
 
 function _handleMusicFinished(data) {

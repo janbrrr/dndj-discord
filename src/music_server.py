@@ -6,9 +6,12 @@ import aiohttp
 import aiohttp_jinja2
 import jinja2
 from aiohttp import web
+from aiohttp.abc import Request
 from discord.ext import commands
 from src import settings
 from src.logging_config import stream_handler
+from src.music.music_actions import MusicActions
+from src.music.music_state import MusicState
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -82,7 +85,11 @@ class MusicServer(commands.Cog):
         Returns the index page.
         """
         context = {
-            "music": {"volume": self.bot.music.volume, "currently_playing": None, "groups": self.bot.music.groups}
+            "music": {
+                "volume": self.bot.music.volume,
+                "currently_playing": self.bot.music.currently_playing,
+                "groups": self.bot.music.groups,
+            }
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
 
@@ -137,22 +144,64 @@ class MusicServer(commands.Cog):
         """
         Starts to play the music.
         """
-        self.bot.music.play_track_list(self.discord_context, request, group_index, track_list_index)
+        await self.bot.music.play_track_list(self.discord_context, request, group_index, track_list_index)
 
     async def _stop_music(self):
         """
         Stops the music.
         """
-        self.bot.music.cancel(self.discord_context)
+        await self.bot.music.cancel(self.discord_context)
 
     async def _set_music_master_volume(self, request, volume):
         """
         Sets the music master volume.
         """
-        self.bot.music.set_master_volume(self.discord_context, request, volume)
+        await self.bot.music.set_master_volume(self.discord_context, request, volume)
 
     async def _set_track_list_volume(self, request, group_index, track_list_index, volume):
         """
         Sets the volume for a specific track list.
         """
-        self.bot.music.set_track_list_volume(self.discord_context, request, group_index, track_list_index, volume)
+        await self.bot.music.set_track_list_volume(self.discord_context, request, group_index, track_list_index, volume)
+
+    async def on_state_change(self, action: MusicActions, request: Request, state: MusicState):
+        """
+        Callback function used by the `MusicManager` at `self.music`.
+
+        Notifies all connected web sockets about the changes.
+        """
+        if action == MusicActions.START:
+            logger.debug("Music Callback: Start")
+            for ws in request.app["websockets"].values():
+                await ws.send_json(
+                    {
+                        "action": "nowPlaying",
+                        "groupIndex": state.group_index,
+                        "trackListIndex": state.track_list_index,
+                        "groupName": state.group_name,
+                        "trackName": state.track_list_name,
+                    }
+                )
+        elif action == MusicActions.STOP:
+            logger.debug("Music Callback: Stop")
+            for ws in request.app["websockets"].values():
+                await ws.send_json({"action": "musicStopped"})
+        elif action == MusicActions.FINISH:
+            logger.debug("Music Callback: Finish")
+            for ws in request.app["websockets"].values():
+                await ws.send_json({"action": "musicFinished"})
+        elif action == MusicActions.MASTER_VOLUME:
+            logger.debug("Music Callback: Master Volume")
+            for ws in request.app["websockets"].values():
+                await ws.send_json({"action": "setMusicMasterVolume", "volume": state.master_volume})
+        elif action == MusicActions.TRACK_LIST_VOLUME:
+            logger.debug("Music Callback: Track List Volume")
+            for ws in request.app["websockets"].values():
+                await ws.send_json(
+                    {
+                        "action": "setTrackListVolume",
+                        "groupIndex": state.group_index,
+                        "trackListIndex": state.track_list_index,
+                        "volume": state.track_list_volume,
+                    }
+                )
