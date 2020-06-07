@@ -1,8 +1,10 @@
 import logging
 from collections import namedtuple
-from typing import Dict
+from typing import Dict, Tuple
 
+import discord
 from src.logging_config import stream_handler
+from src.music import utils
 from src.music.music_checker import MusicChecker
 from src.music.music_group import MusicGroup
 
@@ -37,6 +39,7 @@ class MusicManager:
             groups = sorted(groups, key=lambda x: x.name)
         self.groups = tuple(groups)
         self._currently_playing = None
+        self.is_cancelled = False
         MusicChecker().do_all_checks(self.groups, self.directory)
 
     def __eq__(self, other):
@@ -68,25 +71,98 @@ class MusicManager:
             )
         return CurrentlyPlaying(None, None, None, None, self.volume, None)
 
-    async def cancel(self):
+    def cancel(self, discord_context):
         """
         If a track is currently being played, the replay will be cancelled.
         """
-        logger.info("cancel()")
+        self.is_cancelled = True
+        discord_context.voice_client.stop()
+        while self._currently_playing is not None:
+            pass
 
-    async def play_track_list(self, request, group_index, track_list_index):
+    def play_track_list(self, discord_context, request, group_index, track_list_index):
         """
         If a track list is already being played, it will be cancelled and the new track list will be played.
         """
-        logger.info(f"play_track_list(group_index={group_index}, track_list_index={track_list_index})")
+        if self._currently_playing is not None:
+            self.cancel(discord_context)
+        group = self.groups[group_index]
+        track_list = group.track_lists[track_list_index]
+        logger.info(f"Loading '{track_list.name}'")
+        self._currently_playing = _CurrentlyPlaying(group_index, track_list_index)
+        self._play_track(discord_context, request, group, track_list, track_list.tracks)
 
-    async def set_master_volume(self, request, volume):
+    def _play_track(self, discord_context, request, group, track_list, tracks_to_play):
+        """
+        Plays the given track from the given track list and group.
+        """
+        if self.is_cancelled:
+            logger.info(f"Cancelled '{track_list.name}'")
+            self._currently_playing = None
+            self.is_cancelled = False
+            return
+        if len(tracks_to_play) == 0:
+            if not track_list.loop:
+                logger.info(f"Finished '{track_list.name}'")
+                if track_list.next is None:
+                    return
+                next_group_index, next_track_list_index = self._get_track_list_index_from_name(track_list.next)
+                if next_group_index is None or next_track_list_index is None:
+                    logger.error(f"Could not find a track list named '{track_list.next}'")
+                    return
+                self.play_track_list(discord_context, request, next_group_index, next_track_list_index)
+                return
+            tracks_to_play = track_list.tracks
+        track = tracks_to_play.pop(0)
+        path = utils.get_track_path(group, track_list, track, default_dir=self.directory)
+        ffmpeg_before_options = ""
+        if track.start_at is not None:
+            ffmpeg_before_options += f" -ss {track.start_at}ms"
+        if track.end_at is not None:
+            ffmpeg_before_options += f" -to {track.end_at}ms"
+        logger.info(f"Now Playing: {track.file}")
+        source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(path, before_options=ffmpeg_before_options))
+        volume = (self.volume * track_list.volume) // 100
+        source.volume = volume / 100
+        discord_context.voice_client.play(
+            source,
+            after=lambda e: logger.error(f"Player error: {e}")
+            if e
+            else self._play_track(discord_context, request, group, track_list, tracks_to_play),
+        )
+
+    def _get_track_list_index_from_name(self, name_of_track_list: str) -> Tuple[int, int]:
+        """
+        Returns the group index and the track list index given the name of the track list. Values are `None`
+        if no track list has the given name.
+
+        :param name_of_track_list: name of the track list
+        :return: tuple of the form (<group_index>, <track_list_index>)
+        """
+        next_group_index = None
+        next_track_list_index = None
+        for _group_index, _group in enumerate(self.groups):
+            for _track_list_index, _track_list in enumerate(_group.track_lists):
+                if _track_list.name == name_of_track_list:
+                    next_group_index = _group_index
+                    next_track_list_index = _track_list_index
+                    break
+        return next_group_index, next_track_list_index
+
+    def set_master_volume(self, discord_context, request, volume):
         """
         Sets the master volume for the music.
         """
-        logger.info(f"set_master_volume(volume={volume})")
+        if self._currently_playing is not None:
+            group_index = self._currently_playing.group_index
+            track_list_index = self._currently_playing.track_list_index
+            track_list = self.groups[group_index].track_lists[track_list_index]
+            new_volume = (volume * track_list.volume) // 100
+            discord_context.voice_client.source.volume = new_volume / 100
+        self.volume = volume
+        logger.info(f"Changed music master volume to {volume}")
 
-    async def set_track_list_volume(self, request, group_index, track_list_index, volume):
+    def set_track_list_volume(self, discord_context, request, group_index, track_list_index, volume):
         """
         Sets the volume for a specific track list.
 
@@ -95,7 +171,14 @@ class MusicManager:
         :param track_list_index: index of the track list within the group
         :param volume: value between 0 (mute) and 100 (max)
         """
-        logger.info(
-            f"set_track_list_volume(group_index={group_index}, track_list_index={track_list_index}, "
-            f"volume={volume})"
-        )
+        group = self.groups[group_index]
+        track_list = group.track_lists[track_list_index]
+        track_list.volume = volume
+        if (
+            self._currently_playing is not None
+            and self._currently_playing.group_index == group_index
+            and self._currently_playing.track_list_index == track_list_index
+        ):
+            new_volume = (self.volume * track_list.volume) // 100
+            discord_context.voice_client.source.volume = new_volume / 100
+        logger.info(f"Changed tracklist volume for group={group_index}, track_list={track_list_index} to {volume}")

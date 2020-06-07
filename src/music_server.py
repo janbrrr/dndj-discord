@@ -22,12 +22,14 @@ class MusicServer(commands.Cog):
         self.host = host
         self.port = port
         self.bot = bot
+        self.discord_context = None
 
     @commands.command()
     async def start(self, ctx):
         """
         Starts the web server.
         """
+        self.discord_context = ctx
         self.app = await self._init_app()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
@@ -41,6 +43,7 @@ class MusicServer(commands.Cog):
         Stops the web server.
         """
         await self.runner.cleanup()
+        logger.info("Server shut down.")
 
     @start.before_invoke
     async def ensure_voice(self, ctx):
@@ -134,22 +137,22 @@ class MusicServer(commands.Cog):
         """
         Starts to play the music.
         """
-        await self.bot.music.play_track_list(request, group_index, track_list_index)
+        self.bot.music.play_track_list(self.discord_context, request, group_index, track_list_index)
 
     async def _stop_music(self):
         """
         Stops the music.
         """
-        await self.bot.music.cancel()
+        self.bot.music.cancel(self.discord_context)
 
     async def _set_music_master_volume(self, request, volume):
         """
         Sets the music master volume.
         """
-        await self.bot.music.set_master_volume(request, volume)
+        self.bot.music.set_master_volume(self.discord_context, request, volume)
 
     async def _set_track_list_volume(self, request, group_index, track_list_index, volume):
         """
         Sets the volume for a specific track list.
         """
-        await self.bot.music.set_track_list_volume(request, group_index, track_list_index, volume)
+        self.bot.music.set_track_list_volume(self.discord_context, request, group_index, track_list_index, volume)
