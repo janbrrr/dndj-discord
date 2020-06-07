@@ -1,6 +1,8 @@
+import json
 import logging
 import uuid
 
+import aiohttp
 import aiohttp_jinja2
 import jinja2
 from aiohttp import web
@@ -96,8 +98,58 @@ class MusicServer(commands.Cog):
         logger.info(f"Client {ws_identifier} connected.")
         try:
             while True:
-                await ws_current.receive()
+                msg = await ws_current.receive()
+                await self._handle_message(request, msg)
         except RuntimeError:
             logger.info(f"Client {ws_identifier} disconnected.")
             del request.app["websockets"][ws_identifier]
             return ws_current
+
+    async def _handle_message(self, request, msg):
+        if msg.type != aiohttp.WSMsgType.text:
+            return
+        data_dict = json.loads(msg.data)
+        if "action" not in data_dict:
+            return
+        action = data_dict["action"]
+        if action == "playMusic":
+            if "groupIndex" in data_dict and "trackListIndex" in data_dict:
+                group_index = int(data_dict["groupIndex"])
+                track_list_index = int(data_dict["trackListIndex"])
+                await self._play_music(request, group_index, track_list_index)
+        elif action == "stopMusic":
+            await self._stop_music()
+        elif action == "setMusicMasterVolume":
+            if "volume" in data_dict:
+                volume = int(data_dict["volume"])
+                await self._set_music_master_volume(request, volume)
+        elif action == "setTrackListVolume":
+            if "groupIndex" in data_dict and "trackListIndex" in data_dict and "volume" in data_dict:
+                group_index = int(data_dict["groupIndex"])
+                track_list_index = int(data_dict["trackListIndex"])
+                volume = int(data_dict["volume"])
+                await self._set_track_list_volume(request, group_index, track_list_index, volume)
+
+    async def _play_music(self, request, group_index, track_list_index):
+        """
+        Starts to play the music.
+        """
+        await self.bot.music.play_track_list(request, group_index, track_list_index)
+
+    async def _stop_music(self):
+        """
+        Stops the music.
+        """
+        await self.bot.music.cancel()
+
+    async def _set_music_master_volume(self, request, volume):
+        """
+        Sets the music master volume.
+        """
+        await self.bot.music.set_master_volume(request, volume)
+
+    async def _set_track_list_volume(self, request, group_index, track_list_index, volume):
+        """
+        Sets the volume for a specific track list.
+        """
+        await self.bot.music.set_track_list_volume(request, group_index, track_list_index, volume)
