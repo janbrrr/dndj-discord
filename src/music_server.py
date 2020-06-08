@@ -46,6 +46,7 @@ class MusicServer(commands.Cog):
         Stops the web server.
         """
         await self.runner.cleanup()
+        await ctx.voice_client.disconnect()
         logger.info("Server shut down.")
 
     @start.before_invoke
