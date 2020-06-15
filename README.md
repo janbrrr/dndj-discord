@@ -16,6 +16,7 @@ able to play them without any issues.
   - One only piece of music can be played at a time
 - Start the Discord bot and join a voice channel
 - Start the web server with the config via the ``!start`` bot command
+  - The server downloads the YouTube videos if necessary
   - The server controls the media player and discord voice client
 - Visit the hosted web page from a device in the same network (e.g., computer, phone)
   - The web page displays the available music (as specified in the config)
@@ -87,7 +88,10 @@ Now click on the `OAuth2` section. Check the `bot` scope and give the bot the fo
 Run the example by typing `python start_bot.py "examples/death_house/config.yaml"`.
 Make sure to join a voice channel in discord and type `!start` in a channel that the bot can see to start the server
 (type `!stop` to stop it).
-The bot will now join your voice channel.
+The bot will now join your voice channel and download the music from YouTube.
+
+Note that you may need to clear the cache directory (`/.dndj_cache`/) if disk space becomes an issue.
+You can use the `!clear` bot command to delete all downloads.
 
 Now you can visit `127.0.0.1:8080` in your browser and start playing around. It is an example configuration for running (a variation of) 
 [Death House](https://media.wizards.com/2016/downloads/DND/Curse%20of%20Strahd%20Introductory%20Adventure.pdf).

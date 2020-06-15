@@ -5,12 +5,15 @@ import uuid
 import aiohttp
 import aiohttp_jinja2
 import jinja2
+import yaml
 from aiohttp import web
 from aiohttp.abc import Request
 from discord.ext import commands
-from src import settings
+from src import cache, settings
+from src.loader import CustomLoader
 from src.logging_config import stream_handler
 from src.music.music_actions import MusicActions
+from src.music.music_manager import MusicManager
 from src.music.music_state import MusicState
 
 logger = logging.getLogger(__name__)
@@ -19,25 +22,34 @@ logger.addHandler(stream_handler)
 
 
 class MusicServer(commands.Cog):
-    def __init__(self, bot, host, port):
+    def __init__(self, config_path, host, port):
         self.app = None
         self.runner = None
         self.host = host
         self.port = port
-        self.bot = bot
         self.discord_context = None
+        self.is_running = False
+        self.config_path = config_path
+        self.music_manager = None
 
     @commands.command()
     async def start(self, ctx):
         """
         Starts the web server.
         """
+        if self.is_running:
+            await ctx.send("The server is already running!")
+            return
+        with open(self.config_path) as config_file:
+            config = yaml.load(config_file, Loader=CustomLoader)
+        self.music_manager = MusicManager(config["music"], self.on_state_change)
         self.discord_context = ctx
         self.app = await self._init_app()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         site = web.TCPSite(self.runner, self.host, self.port)
         logger.info(f"Server started on http://{self.host}:{self.port}")
+        self.is_running = True
         await site.start()
 
     @commands.command()
@@ -45,9 +57,27 @@ class MusicServer(commands.Cog):
         """
         Stops the web server.
         """
+        if not self.is_running:
+            await ctx.send("The server is not running.")
+            return
         await self.runner.cleanup()
         await ctx.voice_client.disconnect()
+        self.is_running = False
         logger.info("Server shut down.")
+
+    @commands.command()
+    async def clear(self, ctx):
+        """
+        Clears the cache (downloads).
+        """
+        if self.is_running:
+            await ctx.send("Cannot clear cache while the server is running (type '!stop' to stop it).")
+            return
+        success = cache.clear_cache()
+        if success:
+            logger.info("Cleared cache.")
+        else:
+            logger.error("Failed to clear the cache.")
 
     @start.before_invoke
     async def ensure_voice(self, ctx):
@@ -87,9 +117,9 @@ class MusicServer(commands.Cog):
         """
         context = {
             "music": {
-                "volume": self.bot.music.volume,
-                "currently_playing": self.bot.music.currently_playing,
-                "groups": self.bot.music.groups,
+                "volume": self.music_manager.volume,
+                "currently_playing": self.music_manager.currently_playing,
+                "groups": self.music_manager.groups,
             }
         }
         return aiohttp_jinja2.render_template("index.html", request, context)
@@ -145,25 +175,27 @@ class MusicServer(commands.Cog):
         """
         Starts to play the music.
         """
-        await self.bot.music.play_track_list(self.discord_context, request, group_index, track_list_index)
+        await self.music_manager.play_track_list(self.discord_context, request, group_index, track_list_index)
 
     async def _stop_music(self):
         """
         Stops the music.
         """
-        await self.bot.music.cancel(self.discord_context)
+        await self.music_manager.cancel(self.discord_context)
 
     async def _set_music_master_volume(self, request, volume):
         """
         Sets the music master volume.
         """
-        await self.bot.music.set_master_volume(self.discord_context, request, volume)
+        await self.music_manager.set_master_volume(self.discord_context, request, volume)
 
     async def _set_track_list_volume(self, request, group_index, track_list_index, volume):
         """
         Sets the volume for a specific track list.
         """
-        await self.bot.music.set_track_list_volume(self.discord_context, request, group_index, track_list_index, volume)
+        await self.music_manager.set_track_list_volume(
+            self.discord_context, request, group_index, track_list_index, volume
+        )
 
     async def on_state_change(self, action: MusicActions, request: Request, state: MusicState):
         """

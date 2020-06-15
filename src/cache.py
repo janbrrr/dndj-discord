@@ -63,3 +63,14 @@ def get_youtube_id(url: str) -> str:
 def get_filename_of_youtube_url(url: str) -> str:
     info_dict = _ytdl.extract_info(url, download=False)
     return _ytdl.prepare_filename(info_dict)
+
+
+def clear_cache() -> bool:
+    try:
+        for file in os.listdir(DOWNLOAD_DIR):
+            filepath = os.path.join(DOWNLOAD_DIR, file)
+            if os.path.isfile(filepath):
+                os.unlink(filepath)
+        return True
+    except OSError:
+        return False
