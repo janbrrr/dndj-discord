@@ -46,6 +46,7 @@ to play the music over the discord voice channel.
   - [Registering the Bot](#bot-registration)
   - [Running the Example](#example)
 - [User Guide](#guide)
+  - [Bot Commands](#commands)
   - [Configuring the Music](#guide-config)
   - [Accessing the Web Page from a different Device](#guide-access)
   - [Words of Advice](#guide-advice)
@@ -98,6 +99,12 @@ Now you can visit `127.0.0.1:8080` in your browser and start playing around. It 
 You can start music by clicking the play button and the bot will play it through voice in discord.
 
 # <a name="guide"/>User Guide
+
+## <a name="commands"/>Bot Commands
+
+- `!stop` starts the server
+- `!stop` stops the server
+- `!clear` deletes the downloaded files
 
 ## <a name="guide-config"/>Configuring the Music
 
