@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import uuid
@@ -23,7 +24,7 @@ logger.addHandler(stream_handler)
 
 class MusicServer(commands.Cog):
     def __init__(self, config_path, host, port):
-        self.app = None
+        self.app = self._init_app()
         self.runner = None
         self.host = host
         self.port = port
@@ -31,6 +32,26 @@ class MusicServer(commands.Cog):
         self.is_running = False
         self.config_path = config_path
         self.music_manager = None
+
+    def _init_app(self):
+        """
+        Initializes the web application.
+        """
+        app = web.Application()
+        app["websockets"] = {}
+        app["websocket_tasks"] = {}
+        app.on_shutdown.append(self._shutdown_app)
+        aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("src"))
+        app.router.add_get("/", self.index)
+        app.router.add_static("/static/", path=settings.PROJECT_ROOT / "static", name="static")
+        return app
+
+    async def _shutdown_app(self, app):
+        """
+        Called when the app shut downs. Performs clean-up.
+        """
+        for task in self.app["websocket_tasks"].values():
+            task.cancel()
 
     @commands.command()
     async def start(self, ctx):
@@ -44,7 +65,6 @@ class MusicServer(commands.Cog):
             config = yaml.load(config_file, Loader=CustomLoader)
         self.music_manager = MusicManager(config["music"], self.on_state_change)
         self.discord_context = ctx
-        self.app = await self._init_app()
         self.runner = web.AppRunner(self.app)
         await self.runner.setup()
         site = web.TCPSite(self.runner, self.host, self.port)
@@ -60,8 +80,9 @@ class MusicServer(commands.Cog):
         if not self.is_running:
             await ctx.send("The server is not running.")
             return
+        await self.music_manager.cancel(self.discord_context)
         await self.runner.cleanup()
-        await ctx.voice_client.disconnect()
+        await self.discord_context.voice_client.disconnect()
         self.is_running = False
         logger.info("Server shut down.")
 
@@ -91,26 +112,6 @@ class MusicServer(commands.Cog):
                 await ctx.send("You are not connected to a voice channel.")
                 raise commands.CommandError("Author not connected to a voice channel.")
 
-    async def _init_app(self):
-        """
-        Initializes the web application.
-        """
-        app = web.Application()
-        app["websockets"] = {}
-        app.on_shutdown.append(self._shutdown_app)
-        aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("src"))
-        app.router.add_get("/", self.index)
-        app.router.add_static("/static/", path=settings.PROJECT_ROOT / "static", name="static")
-        return app
-
-    async def _shutdown_app(self, app):
-        """
-        Called when the app shut downs. Performs clean-up.
-        """
-        for ws in app["websockets"].values():
-            await ws.close()
-        app["websockets"].clear()
-
     def _get_page(self, request):
         """
         Returns the index page.
@@ -129,22 +130,29 @@ class MusicServer(commands.Cog):
         Handles the client connection.
         """
         ws_current = web.WebSocketResponse()
+        ws_current.force_close()
         ws_ready = ws_current.can_prepare(request)
         if not ws_ready.ok:
             return self._get_page(request)
         await ws_current.prepare(request)
-
         ws_identifier = str(uuid.uuid4())
-        request.app["websockets"][ws_identifier] = ws_current
+        task = asyncio.create_task(self._handle_websocket_connection(request, ws_current, ws_identifier))
+        request.app["websocket_tasks"][ws_identifier] = task
+        await task
+
+    async def _handle_websocket_connection(self, request, ws, ws_identifier):
+        request.app["websockets"][ws_identifier] = ws
         logger.info(f"Client {ws_identifier} connected.")
         try:
-            while True:
-                msg = await ws_current.receive()
+            while not ws.closed:
+                msg = await ws.receive()
                 await self._handle_message(request, msg)
-        except RuntimeError:
+        except Exception:
+            pass
+        finally:
             logger.info(f"Client {ws_identifier} disconnected.")
-            del request.app["websockets"][ws_identifier]
-            return ws_current
+            request.app["websockets"].pop(ws_identifier, None)
+            request.app["websocket_tasks"].pop(ws_identifier, None)
 
     async def _handle_message(self, request, msg):
         if msg.type != aiohttp.WSMsgType.text:
