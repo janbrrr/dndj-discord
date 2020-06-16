@@ -102,8 +102,8 @@ You can start music by clicking the play button and the bot will play it through
 
 ## <a name="commands"/>Bot Commands
 
-- `!stop` starts the server
-- `!stop` stops the server
+- `!stop` starts the server and the bot joints your voice channel
+- `!stop` stops the server and the bot leaves your voice channel
 - `!clear` deletes the downloaded files
 
 ## <a name="guide-config"/>Configuring the Music
