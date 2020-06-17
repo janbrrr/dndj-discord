@@ -61,6 +61,7 @@ class MusicServer(commands.Cog):
         if self.is_running:
             await ctx.send("The server is already running!")
             return
+        cache.prepare()
         with open(self.config_path) as config_file:
             config = yaml.load(config_file, Loader=CustomLoader)
         self.music_manager = MusicManager(config["music"], self.on_state_change)

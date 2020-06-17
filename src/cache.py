@@ -21,6 +21,16 @@ if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
 
+class CacheNotPreparedException(RuntimeError):
+    def __init__(self):
+        super().__init__("You need to call 'cache.prepare()' before using the cache!")
+
+
+def prepare():
+    global _YOUTUBE_IDS_IN_CACHE
+    _YOUTUBE_IDS_IN_CACHE = tuple(_get_youtube_ids_in_cache())
+
+
 def _get_youtube_ids_in_cache() -> List[str]:
     files = [file for file in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, file))]
     n_files = len(files)
@@ -33,7 +43,7 @@ def _get_youtube_ids_in_cache() -> List[str]:
     return [os.path.splitext(file)[0] for file in files]
 
 
-_YOUTUBE_IDS_IN_CACHE = tuple(_get_youtube_ids_in_cache())
+_YOUTUBE_IDS_IN_CACHE = CacheNotPreparedException()
 
 
 _ytdl_options = {
