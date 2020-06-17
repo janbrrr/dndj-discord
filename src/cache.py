@@ -1,8 +1,14 @@
+import logging
 import os
 from functools import lru_cache
 from typing import List
 
 import youtube_dl
+from src.logging_config import stream_handler
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(stream_handler)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -17,6 +23,13 @@ if not os.path.exists(DOWNLOAD_DIR):
 
 def _get_youtube_ids_in_cache() -> List[str]:
     files = [file for file in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, file))]
+    n_files = len(files)
+    total_file_size_in_bytes = 0
+    for file in files:
+        total_file_size_in_bytes += os.stat(os.path.join(DOWNLOAD_DIR, file)).st_size
+    one_byte_in_gigabyte = 9.3132257461548e-10
+    logger.info(f"Cache contains {n_files} files totaling {total_file_size_in_bytes * one_byte_in_gigabyte:.3f} GB")
+    logger.info("You can use the bot command '!clear' to clear the cache.")
     return [os.path.splitext(file)[0] for file in files]
 
 
