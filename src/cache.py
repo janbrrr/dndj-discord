@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from functools import lru_cache
 from typing import List
 
@@ -76,10 +77,17 @@ def download_youtube_audio_if_not_in_cache(url: str) -> bool:
     return False
 
 
+_YOUTUBE_ID_REGEX = re.compile(
+    r'(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=)|youtu\.be/)([^"&?/\s]{11})'
+)
+
+
 @lru_cache(maxsize=50)
 def get_youtube_id(url: str) -> str:
-    info_dict = _ytdl.extract_info(url, download=False)
-    return info_dict["id"]
+    match = _YOUTUBE_ID_REGEX.search(url)
+    if match is None:
+        raise ValueError(f"Expected an URL to a YouTube video but got '{url}' instead.")
+    return match.group(1)
 
 
 @lru_cache(maxsize=50)
